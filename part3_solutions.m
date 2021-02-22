@@ -198,4 +198,109 @@ hold off;
 legend('Day 1', 'Day 2');
 xlabel('Aligned mode 1');
 ylabel('Aligned mode 2');
-title('Aligned latent variables across days');  
+title('Aligned latent variables across days');
+
+%% Section 5: Post scriptum - was QR decomposition necessary?
+% In this section we'll arrive at the same result taking an alternative
+% route: directly use the leading factors from the initial SVD of the data,
+% instead of calculating the QR decomposition of the latent variables. The 
+% factors (columns of V in the initial SVD; principal components across time)
+% are orthonormal already. What is the advantage of doing QR decomposition?
+
+% Select first d basis vectors from V_n and V_m. These are 'factors', 
+% vectors of linear combinations across time bins instead of neurons.
+V_n_tilde = V_n(:, 1:d);
+V_m_tilde = V_m(:, 1:d);
+
+% Do SVD of inner products between factors
+[U_v, S_v, V_v] = svd(V_n_tilde' * V_m_tilde);
+
+% Now the matrix of singular values of the data is going to play to role of
+% R in the QR decomposition: it holds coefficients for linear combination of
+% basis vectors. Only select the first d rows and columns.
+S_n_tilde = S_n(1:d, 1:d);
+S_m_tilde = S_m(1:d, 1:d);
+
+% Calculate matrices that transform data to aligned neural mode space -
+% equivalent to the matrices M_m and M_n before - from SVD results
+M_n_svd = inv(S_n_tilde) * U_v;
+M_m_svd = inv(S_m_tilde) * V_v;
+
+% Apply transformation to get latent variables in aligned space
+L_n_aligned_svd = M_n_svd' * L_n;
+L_m_aligned_svd = M_m_svd' * L_m;
+
+% Make a plot to compare the transformation matrices from QR decomposition
+% to those obtained directly from factors of original SVD
+figure();
+% First subplot: M_n
+subplot(2,2,1);
+imagesc(M_n);
+axis image;
+xlabel('Columns');
+ylabel('Rows');
+title('M_n from QR decomposition');
+% Second subplot: M_m
+subplot(2,2,2);
+imagesc(M_m);
+axis image;
+xlabel('Columns');
+ylabel('Rows');
+title('M_m from QR decomposition');
+% Third subplot: M_n_svd
+subplot(2,2,3);
+imagesc(M_n_svd);
+axis image;
+xlabel('Columns');
+ylabel('Rows');
+title('M_n directly from SVD');
+% Fourth subplot: U_m_tilde
+subplot(2,2,4);
+imagesc(M_m_svd);
+axis image;
+xlabel('Columns');
+ylabel('Rows');
+title('M_m directly from SVD');
+
+% Now plot basis vectors for alignment and aligned latent variables for
+% both days, on different rows for different approaches, to compare them
+figure()
+vs = {V_n_tilde, V_m_tilde};
+for currDay = 1:2
+    % First row subplots: orthonormal latent variables for QR decomposition
+    subplot(2,3,currDay);    
+    plot(qs{currDay}(:,1), qs{currDay}(:,2), '-x');
+    % Set plot layout properties
+    xlabel('Orthonormal mode 1');
+    ylabel('Orthonormal mode 2');
+    title(['Orthonormal latent variables Q on day ' num2str(currDay)]); 
+    % Second row subplots: factors directly from initial SVD
+    subplot(2,3,3 + currDay);    
+    plot(vs{currDay}(:,1), vs{currDay}(:,2), '-x');
+    % Set plot layout properties
+    xlabel('Factor 1');
+    ylabel('Factor 2');
+    title(['Factors (PCs across time) of V on day ' num2str(currDay)]);  
+end
+% Fourth subplot for each day: aligned latent variables using QR decomposition
+subplot(2,3,3);
+hold on;
+plot(L_n_aligned(1,:), L_n_aligned(2,:), '-x');
+plot(L_m_aligned(1,:), L_m_aligned(2,:), '-x');
+hold off;
+% Set plot layout properties
+legend('Day 1', 'Day 2');
+xlabel('Aligned mode 1');
+ylabel('Aligned mode 2');
+title('Aligned latent from QR decomposition');
+% Fourth subplot for each day: aligned latent variables using initial SVD factors
+subplot(2,3,6);
+hold on;
+plot(L_n_aligned_svd(1,:), L_n_aligned_svd(2,:), '-x');
+plot(L_m_aligned_svd(1,:), L_m_aligned_svd(2,:), '-x');
+hold off;
+% Set plot layout properties
+legend('Day 1', 'Day 2');
+xlabel('Aligned mode 1');
+ylabel('Aligned mode 2');
+title('Aligned latent from initial SVD factors');
